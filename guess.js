@@ -5,19 +5,12 @@ document.querySelector("h1").innerHTML = nameGame;
 document.querySelector("footer").innerHTML = `${nameGame} Game created by Mohamed Sabry`
 
 // setting Game options
-
-const numbersOfTries = 6;
-let currentTry = 1;
-let numberOfHint = 2;
 // mange words 
 
 let words = ["Create", "Update", "Delete", "Master", "Branch", "Mainly", "Elzero", "School"];
-// let wordGuess = randomWord();
 function randomWord() {
     return words[Math.floor(Math.random() * words.length)].toLowerCase();
 }
-let massageArea = document.querySelector(".massage")
-// let numbersOfInputs = wordGuess.length
 function addUpperCaseAndFoucinInput(input) {
     input.addEventListener("input", function () {
         this.value = this.value.toUpperCase();
@@ -60,7 +53,7 @@ function genrateInput(context) {
     const numbersOfInputs = context.wordLength();
     const inputsContainer = document.querySelector(".inputs")
     //creat main tryDiv or parent div
-    for (let i = 1; i <= numbersOfTries; i++) {
+    for (let i = 1; i <= context.totalTries; i++) {
         const tryDiv = document.createElement("div")
         tryDiv.classList.add(`try-${i}`, 'try')
         const span = document.createElement("span")
@@ -72,7 +65,7 @@ function genrateInput(context) {
         //creat inputs
         for (let j = 1; j <= numbersOfInputs; j++) {
             const input = document.createElement("input")
-            input.type = "Text";
+            input.type = "text";
             input.id = `guess-${i}-input-${j}`
             input.setAttribute("maxLength", "1")
             tryDiv.appendChild(input)
@@ -93,110 +86,50 @@ function genrateInput(context) {
     }
     inputsContainer.children[0].children[1].focus();
 }
-const checkButton = document.querySelector(".check")
 
-const gameContext = {
-    word: randomWord(),
-    currentWord() { return this.word },
-    // For new game
-    reset() { this.word = randomWord() },
-    wordLength() { return this.word.length }
-}
-
-// console.log(wordGuess)
-function guessCheck(context) {
+function guessCheck({context, canvas}) {
     const numbersOfInputs = context.wordLength();
     const wordGuess = context.currentWord();
 
     let successguess = true;
     for (let i = 1; i <= numbersOfInputs; i++) {
-        const inputField = document.querySelector(`#guess-${currentTry}-input-${i}`)
-
-        const Letter = inputField.value.toLowerCase();
+        const guess = canvas.guesser(context.currentTry(), i)
 
         const atctualLetter = wordGuess[i - 1]
 
-        if (Letter === atctualLetter) {
+        if (guess.isMatch(atctualLetter)) {
             //letter is correct and in place
-            inputField.classList.add("yes-in-place")
+            guess.markMatch();
             //letter is correct and not in place
-        } else if (wordGuess.includes(Letter) && Letter !== "") {
-            inputField.classList.add("not-in-place")
+        } else if (guess.isNotInPlace(wordGuess)) {
+            guess.markNotInPlace();
             successguess = false;
             //if you miss write letter 
-        } else if (Letter === "") {
-            inputField.setAttribute("placeholder", "miss")
-            inputField.style.backgroundColor = "red"
+        } else if (guess.isMiss()) {
+            guess.markMiss();
             successguess = false;
         }
         // letter is wrong
         else {
-            inputField.classList.add("no")
+            guess.markWrong();
             successguess = false;
         }
     }
     //check if user win or lose
     if (successguess) {
-        let span = document.createElement("span")
-        let text = document.createTextNode(`${wordGuess}`)
-        let text2 = document.createTextNode("you win the word is")
-        span.append(text)
-        massageArea.append(text2, span)
-        const a = document.querySelector(".key-colors")
-        a.style.display = "none"
-        //////add disabled class on ALL try Divs 
-        let allTries = document.querySelectorAll('.try');
-        allTries.forEach((tryDiv) => {
-            tryDiv.classList.add("disabled-inputs")
-        })
-        // disabled check button and hint button
-        checkButton.disabled = true;
-        hintButton.disabled = true;
-
+        canvas.win(wordGuess)
     } else {
         // disabled curentTry 
-        document.querySelector(`.try-${currentTry}`).classList.add("disabled-inputs")
-        // disabled curentTry input
-        const currentTryInputs = document.querySelectorAll(`.try-${currentTry} > input`)
-        currentTryInputs.forEach((input => {
-            input.disabled = true;
-        }))
+        canvas.getTry(context.currentTry()).disable();
 
-        currentTry++;
+        context.nextTry();
 
-        const el = document.querySelector(`.try-${currentTry}`)
-        if (el) {
-            // Undisabled next curentTry 
-            el.classList.remove("disabled-inputs")
-            // Undisabled  next curentTry  input
-            const nextTryInputs = document.querySelectorAll(`.try-${currentTry} > input`)
-
-            nextTryInputs.forEach((input) => {
-                input.disabled = false;
-            })
-            el.children[1].focus();
-        } else {
-            massageArea.classList.add("gameOver")
-            const span = document.createElement("span")
-            const text = document.createTextNode(`${wordGuess}`)
-            span.appendChild(text)
-            const text2 = document.createTextNode(`game over the word is`)
-            massageArea.append(text2, span)
-            //disabled check button  and hint button
-            checkButton.disabled = true;
-            hintButton.disabled = true;
-            const a = document.querySelector(".key-colors")
-            a.style.display = "none"
-        }
+        canvas.nextTry(context.currentTry());
     }
 }
 
 // mange hintButton 
-
-document.querySelector(".hint span").innerHTML = numberOfHint
-const hintButton = document.querySelector(".hint")
-
-function hint(context) {
+function hint({context, canvas}) {
     // get enabled input from input 
     let enabledInput = document.querySelectorAll("input:not([disabled])")
     const wordGuess = context.currentWord();
@@ -221,31 +154,180 @@ function hint(context) {
             randomInput.classList.add("hintInput")
         }
         // input try number of hint on span 
-        if (numberOfHint > 0) {
-            numberOfHint--
-            document.querySelector(".hint span").innerHTML = numberOfHint
-            if (numberOfHint === 0) {
-                hintButton.disabled = true;
+        if (context.hints > 0) {
+            context.nextHint();
+            document.querySelector(".hint span").innerHTML = context.hints
+            if (context.hints === 0) {
+                canvas.hintButton.disabled = true;
 
             }
 
         }
 
         randomInput.focus();
-
-
     }
 
 }
-function ent(e) {
-    if (e.key === "Enter") {
-        checkButton.click()
+
+function resetGame ({context, canvas}) {
+    context.reset();
+    canvas.reset(context);
+    genrateInput(context);
+}
+
+const gameContext = {
+    // Manage word
+    word: randomWord(),
+    currentWord() { return this.word },
+    reset() { this.word = randomWord(); this.resetTry(); this.resetHint() },
+    wordLength() { return this.word.length },
+
+    // Manage tries
+    totalTries: 6,
+    tries: 1,
+    currentTry() { return this.tries },
+    nextTry() { this.tries++ },
+    resetTry() { this.tries = 1 },
+
+    // Manage hint
+    hints: 2,
+    nextHint() { this.hints-- },
+    resetHint() { this.hints = 2 }
+}
+
+const gameCanvas = {
+    // Controls
+    massageArea: document.querySelector(".massage"),
+    checkButton: document.querySelector(".check"),
+    hintButton: document.querySelector(".hint"),
+    hintCount: document.querySelector(".hint span"),
+    resetButton: document.querySelector(".reset"),
+    keyColors: document.querySelector(".key-colors"),
+    inputsContainer: document.querySelector(".inputs"),
+    tries: document.querySelectorAll(".try"),
+
+    guesser(guess, letter){ 
+        const guessElement = document.querySelector(`#guess-${guess}-input-${letter}`)
+        return {
+            value: guessElement.value.toLowerCase(),
+            isMatch(actualLetter) { return this.value === actualLetter.toLowerCase() },
+            markMatch() { guessElement.classList.add("yes-in-place") },
+            isNotInPlace(word) { return this.value !== "" && word.includes(this.value) },
+            markNotInPlace() { guessElement.classList.add("not-in-place") },
+            isMiss() { return this.value === "" },
+            markMiss() { guessElement.setAttribute("placeholder", "miss"); guessElement.style.backgroundColor = "red" },
+            markWrong() { guessElement.classList.add("no") }
+        }
+    },
+
+    getTry(tryNumber) {
+        const tryElements = document.querySelector(`.try${tryNumber? `-${tryNumber}` : ""}`)
+        return {
+            isValidTry() { return Boolean(tryElements) },
+            inputs: tryElements ? tryElements.querySelectorAll("input"): undefined,
+            disable() {
+                this.inputs.forEach((input) => input.disabled = true)
+                tryElements.classList.add("disabled-inputs")
+            },
+            enable() {
+                this.inputs.forEach((input) => input.disabled = false)
+                tryElements.classList.remove("disabled-inputs")
+                tryElements.children[1].focus()
+            }
+        }
+    },
+    nextTry(tryNumber) {
+        const nextTry = this.getTry(tryNumber);
+        if (nextTry.isValidTry()) {
+            nextTry.enable();
+        } else {
+            this.gameOver();
+        }
+    },
+
+    setHints(hints) {
+        this.hintCount.innerHTML = hints;
+    },
+    resetMessage() {
+        if (this.massageArea.hasChildNodes()) {
+            while (this.massageArea.firstChild) {
+                this.massageArea.removeChild(this.massageArea.firstChild)
+            }
+        }
+    },
+    resetInputs() {
+        if (this.inputsContainer.hasChildNodes()) {
+            while (this.inputsContainer.firstChild) {
+                this.inputsContainer.removeChild(this.inputsContainer.firstChild)
+            }
+        }
+    },
+    disableTries() {
+        this.tries.forEach((tryDiv) => {
+            tryDiv.classList.add("disabled-inputs")
+        })
+    },
+
+    hideKeyColors() {
+        this.keyColors.style.display = "none";
+    },
+    showKeyColors() {
+        this.keyColors.style.display = "block";
+    },
+
+    win(word) {
+        let span = document.createElement("span")
+        let text = document.createTextNode(word)
+        let text2 = document.createTextNode("you win the word is")
+        span.append(text)
+        this.massageArea.append(text2, span)
+
+        this.checkButton.disabled = true;
+        this.hintButton.disabled = true;
+
+        this.hideKeyColors();
+        this.disableTries();
+    },
+
+    gameOver(word) {
+        this.massageArea.classList.add("gameOver");
+        const span = document.createElement("span");
+        const text = document.createTextNode(word);
+        span.appendChild(text)
+        const text2 = document.createTextNode(`game over the word is`);
+        this.massageArea.append(text2, span);
+
+        this.checkButton.disabled = true;
+        this.hintButton.disabled = true;
+
+        this.keyColors.style.display = "none";
+        
+    },
+
+    reset(context) {
+        this.resetInputs();
+        this.resetMessage();
+        this.showKeyColors();
+
+        this.checkButton.disabled = false;
+        this.hintButton.disabled = false;
+        this.setHints(context.hints);
+    },
+
+    setup(context) {
+        this.checkButton.addEventListener("click", () =>  guessCheck({context, canvas: this}))
+        this.hintButton.addEventListener("click", () => hint({context, canvas: this}))
+        this.resetButton.addEventListener("click", () => resetGame({context, canvas: this}))
+        this.setHints(context.hints);
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                guessCheck({context, canvas: this})
+            }
+        })
     }
 }
-document.addEventListener("keydown", ent)
-hintButton.addEventListener("click", () => { hint(gameContext) })
 
-checkButton.addEventListener("click", () => { guessCheck(gameContext) })
+gameCanvas.setup(gameContext);
 
 window.onload = genrateInput(gameContext);
-

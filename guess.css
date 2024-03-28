@@ -53,6 +53,12 @@ h1 {
                 /* width: fit-content; */
             }
 
+            .reset {
+                background-color: #333;
+                border-color: #333;
+                flex: 1;
+            }
+
             button {
                 padding: 10px 15px;
                 color: white;
@@ -294,6 +300,4 @@ footer {
         flex: 1;
     }
 
-
-    x
 }
